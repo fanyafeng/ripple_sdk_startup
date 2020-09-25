@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="androidx_startup" translatable="false">androidx.startup</string>
+    <string name="ripple_startup" translatable="false">ripple.startup</string>
 </resources>

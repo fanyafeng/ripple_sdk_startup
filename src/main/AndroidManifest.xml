@@ -5,7 +5,7 @@
     <application>
         <provider
             android:name="com.ripple.sdk.startup.provider.InitializationProvider"
-            android:authorities="${applicationId}.androidx-startup"
+            android:authorities="${applicationId}.ripple-startup"
             android:exported="false"
             tools:node="merge" />
     </application>

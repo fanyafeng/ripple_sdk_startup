@@ -16,7 +16,14 @@ import java.util.*
  * Description:
  */
 class AppInitializer internal constructor(context: Context) {
+    /**
+     * 存放初始化过后的实例
+     */
     private val mInitialized: MutableMap<Class<*>?, Any?>
+
+    /**
+     * 存放已经初始化后的实例
+     */
     private val mDiscovered: MutableSet<Class<out Initializer<*>?>>
 
     /**
@@ -87,16 +94,22 @@ class AppInitializer internal constructor(context: Context) {
      *
      * @param component The [Initializer] class to check
      * @return `true` if the [Initializer] was eagerly initialized.
+     *
+     * 判断是否已经完成初始化
+     * 针对xml中预设配置
      */
     fun isEagerlyInitialized(component: Class<out Initializer<*>?>): Boolean {
         // If discoverAndInitialize() was never called, then nothing was eagerly initialized.
         return mDiscovered.contains(component)
     }
 
-    fun <T> doInitialize(
+    private fun <T> doInitialize(
         component: Class<out Initializer<*>?>,
-        initializing: MutableSet<Class<*>?>
+        initializing: MutableSet<Class<*>?>//去重set
     ): T {
+        /*
+        确保线程安全
+         */
         synchronized(sLock) {
             val isTracingEnabled = TraceCompat.isEnabled()
             return try {
@@ -114,11 +127,15 @@ class AppInitializer internal constructor(context: Context) {
                 if (!mInitialized.containsKey(component)) {
                     initializing.add(component)
                     try {
+                        //利用反射，通过构造方法获取实例
                         val instance: Any? = component.getDeclaredConstructor().newInstance()
+                        //强制类型转化，因为之前做了类型限制，强转不会出错
                         val initializer = instance as Initializer<*>?
+                        //获取当前init实例所依赖的其他需要初始化的实例
                         val dependencies = initializer!!.dependencies()
-                        if (!dependencies.isEmpty()) {
+                        if (dependencies.isNotEmpty()) {
                             for (clazz in dependencies) {
+                                //迭代初始化，保证每个需要初始化以及当前实例所依赖的实例都能得到初始化
                                 if (!mInitialized.containsKey(clazz)) {
                                     doInitialize<Any>(clazz!!, initializing)
                                 }
@@ -127,16 +144,20 @@ class AppInitializer internal constructor(context: Context) {
                         if (StartupLogger.DEBUG) {
                             StartupLogger.i(String.format("Initializing %s", component.name))
                         }
+                        //同步方法，当当前实例初始化完成后根据泛型获取相应实例
                         result = initializer.create(mContext)
                         if (StartupLogger.DEBUG) {
                             StartupLogger.i(String.format("Initialized %s", component.name))
                         }
+                        //同步方法，初始化实例完成之后需要移除
                         initializing.remove(component)
+                        //与上方!mInitialized.containsKey(component)相呼应
                         mInitialized[component] = result
                     } catch (throwable: Throwable) {
                         throw StartupException(throwable)
                     }
                 } else {
+                    //防止有相同的实例重复初始化，去重，加快初始化时间
                     result = mInitialized[component]
                 }
                 result as T
@@ -156,7 +177,7 @@ class AppInitializer internal constructor(context: Context) {
             val providerInfo = mContext.packageManager
                 .getProviderInfo(provider, PackageManager.GET_META_DATA)
             val metadata = providerInfo.metaData
-            val startup = mContext.getString(R.string.androidx_startup)
+            val startup = mContext.getString(R.string.ripple_startup)
             if (metadata != null) {
                 val initializing: MutableSet<Class<*>?> = HashSet()
                 val keys = metadata.keySet()
@@ -170,6 +191,7 @@ class AppInitializer internal constructor(context: Context) {
                             if (StartupLogger.DEBUG) {
                                 StartupLogger.i(String.format("Discovered %s", key))
                             }
+                            //调用方法进行初始化
                             doInitialize<Any>(component, initializing)
                         }
                     }

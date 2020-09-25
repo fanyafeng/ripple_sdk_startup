@@ -19,6 +19,7 @@ class InitializationProvider : ContentProvider() {
     override fun onCreate(): Boolean {
         val context = context
         if (context != null) {
+            //自动初始化，根据配置文件的provider进行解析
             AppInitializer.getInstance(context).discoverAndInitialize()
         } else {
             throw StartupException("Context cannot be null")
