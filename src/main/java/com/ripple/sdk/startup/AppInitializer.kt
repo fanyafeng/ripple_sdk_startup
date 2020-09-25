@@ -85,7 +85,7 @@ class AppInitializer internal constructor(context: Context) {
      * @param <T>       The instance type being initialized
      * @return The initialized instance
     </T> */
-    fun <T> initializeComponent(component: Class<out Initializer<T?>?>): T {
+    fun <T> initializeComponent(component: Class<out Initializer<*>?>): T {
         return doInitialize(component, HashSet())
     }
 
@@ -167,7 +167,7 @@ class AppInitializer internal constructor(context: Context) {
         }
     }
 
-    fun discoverAndInitialize() {
+    internal fun discoverAndInitialize() {
         try {
             TraceCompat.beginSection(SECTION_NAME)
             val provider = ComponentName(
