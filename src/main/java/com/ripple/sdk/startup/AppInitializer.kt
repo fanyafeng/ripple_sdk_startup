@@ -22,6 +22,16 @@ class AppInitializer internal constructor(context: Context) {
     private val mInitialized: MutableMap<Class<*>?, Any?>
 
     /**
+     * 获取已经初始化的component的map
+     */
+    fun getInitializedMap() = mInitialized
+
+    /**
+     * 判断component是否已经初始化
+     */
+    fun hasInitialized(component: Class<out Initializer<*>>) = mInitialized.containsKey(component)
+
+    /**
      * 存放已经初始化后的实例
      */
     private val mDiscovered: MutableSet<Class<out Initializer<*>?>>
@@ -85,27 +95,27 @@ class AppInitializer internal constructor(context: Context) {
      * @param <T>       The instance type being initialized
      * @return The initialized instance
     </T> */
-    fun <T> initializeComponent(component: Class<out Initializer<*>?>): T {
+    fun <T> initializeComponent(component: Class<out Initializer<T>>): T {
         return doInitialize(component, HashSet())
     }
 
     /**
      * Returns `true` if the [Initializer] was eagerly initialized..
-     *
+     *:
      * @param component The [Initializer] class to check
      * @return `true` if the [Initializer] was eagerly initialized.
      *
      * 判断是否已经完成初始化
      * 针对xml中预设配置
      */
-    fun isEagerlyInitialized(component: Class<out Initializer<*>?>): Boolean {
+    fun isEagerlyInitialized(component: Class<out Initializer<*>>): Boolean {
         // If discoverAndInitialize() was never called, then nothing was eagerly initialized.
         return mDiscovered.contains(component)
     }
 
     private fun <T> doInitialize(
-        component: Class<out Initializer<*>?>,
-        initializing: MutableSet<Class<*>?>//去重set
+        component: Class<out Initializer<*>>,
+        initializing: MutableSet<Class<*>>//去重set
     ): T {
         /*
         确保线程安全
@@ -179,14 +189,14 @@ class AppInitializer internal constructor(context: Context) {
             val metadata = providerInfo.metaData
             val startup = mContext.getString(R.string.ripple_startup)
             if (metadata != null) {
-                val initializing: MutableSet<Class<*>?> = HashSet()
+                val initializing: MutableSet<Class<*>> = HashSet()
                 val keys = metadata.keySet()
                 for (key in keys) {
                     val value = metadata.getString(key, null)
                     if (startup == value) {
                         val clazz = Class.forName(key)
                         if (Initializer::class.java.isAssignableFrom(clazz)) {
-                            val component = clazz as Class<out Initializer<*>?>
+                            val component = clazz as Class<out Initializer<*>>
                             mDiscovered.add(component)
                             if (StartupLogger.DEBUG) {
                                 StartupLogger.i(String.format("Discovered %s", key))
